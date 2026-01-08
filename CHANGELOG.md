@@ -5,6 +5,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-01-08
+
+### Added
+
+- **Per-Webhook Support Notification**: Send support reminders to individual webhooks
+  - Golden heart button on each webhook card
+  - Confirmation dialog before sending
+  - Works alongside global "Send to All" support notification
+
+### Changed
+
+- Refactored support notification payload into reusable helper function
+- Improved code organization for notification endpoints
+
+---
+
+## [1.4.0] - 2026-01-08
+
+### Added
+
+- **Support Notification**: Send support/donation reminders to Discord webhooks
+  - Modern Discord embed with organized fields layout
+  - Links to GitHub, Ko-fi, Buy Me a Coffee, PayPal, GitHub Sponsors
+  - Genshin Impact UID for in-game Genesis Crystal gifts
+  - Beautiful confirmation modal in the web UI
+- **Star History**: Added Star History chart to README
+
+### Changed
+
+- Improved webhook card button alignment and styling
+- Enhanced game toggle buttons with better spacing and icons
+
+### Security
+
+- Updated Flask to 3.1.0
+- Updated python-dateutil to 2.9.0.post0
+- Updated pytz to 2024.2
+- Added Werkzeug 3.1.3, MarkupSafe 3.0.2, Jinja2 3.1.4
+- Added certifi and urllib3 with minimum secure versions
+- All dependencies updated to latest versions to mitigate known vulnerabilities
+
 ## [1.3.0] - 2026-01-08
 
 ### Added

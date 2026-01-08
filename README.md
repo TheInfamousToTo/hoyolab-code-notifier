@@ -14,6 +14,7 @@ Automatically monitors for new HoYoLab redemption codes and sends notifications 
 - 🎮 Supports **Genshin Impact**, **Honkai: Star Rail**, and **Zenless Zone Zero**
 - 🔔 **Multi-Webhook Support** - Send to multiple Discord channels with per-webhook game selection
 - ⏰ **Code Expiration Tracking** - See when codes expire with timezone-aware display
+- 💛 **Support Notifications** - Send support reminders globally or per-webhook
 - 🎭 Game-specific mascot avatars (Paimon, PomPom, Eous) for Discord notifications
 - 🖼️ Official HoYoverse game icons in the UI
 - 🚫 Duplicate code prevention - never sends the same code twice
@@ -173,6 +174,16 @@ If you find this project helpful, consider supporting:
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/theinfamoustoto)
 [![Ko-Fi](https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/theinfamoustoto)
 [![PayPal](https://img.shields.io/badge/PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://paypal.me/alsatrawi)
+
+## Star History
+
+<a href="https://www.star-history.com/#TheInfamousToTo/hoyolab-code-notifier&type=Date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=TheInfamousToTo/hoyolab-code-notifier&type=Date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=TheInfamousToTo/hoyolab-code-notifier&type=Date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=TheInfamousToTo/hoyolab-code-notifier&type=Date&legend=top-left" />
+ </picture>
+</a>
 
 ## License
 

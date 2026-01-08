@@ -42,38 +42,61 @@ Add Telegram bot support alongside Discord:
 
 ---
 
-## 4. Support Notification (On-Demand)
+## ~~4. Support Notification (On-Demand)~~ ✅ COMPLETED
 Deploy an optional "support reminder" notification to encourage users to support the project:
-- Send a friendly reminder about supporting the project creator
-- Include links to GitHub (star the repo), Ko-fi, Buy Me a Coffee, PayPal
-- Make it configurable (enable/disable, frequency)
-- Can be triggered manually or automatically (e.g., weekly/monthly)
+- ✅ Send a friendly reminder about supporting the project creator
+- ✅ Include links to GitHub (star the repo), Ko-fi, Buy Me a Coffee, PayPal
+- ✅ Send to all webhooks at once OR individual webhooks
+- ✅ Modern Discord embed with organized fields layout
+
+**Implemented Features:**
+- Global "Send Support Reminder" button for all webhooks
+- Per-webhook support button (golden heart) for individual webhooks
+- Beautiful confirmation modal in the web UI
+- Genshin Impact UID for in-game Genesis Crystal gifts
+
+---
+
+## 5. Code Statistics Dashboard
+Add a statistics section to track code redemption history:
+- Total codes discovered per game
+- Codes discovered this week/month
+- Graph showing code frequency over time
+- Export statistics as CSV/JSON
 
 **Implementation:**
-- Add support notification endpoint `/api/send-support-notification`
-- Create a visually appealing Discord embed with:
-  - Project appreciation message
-  - GitHub repo link (for starring)
-  - Ko-fi link: https://ko-fi.com/theinfamoustoto
-  - Buy Me a Coffee link: https://www.buymeacoffee.com/theinfamoustoto
-  - PayPal link: https://paypal.me/alsatrawi
-  - GitHub Sponsors: https://github.com/sponsors/TheInfamousToTo
-- Add "Send Support Reminder" button in the GUI
-- Optional: Auto-send support notification on a configurable schedule (default: disabled)
-- Add config option `support_notification_enabled` and `support_notification_interval`
+- Store code discovery timestamps in sent_codes.json
+- Add statistics endpoint `/api/statistics`
+- Create dashboard section in the web GUI
+- Add chart.js or similar for visualizations
 
-**Message Example:**
-```
-🌟 Enjoying HoYoLab Code Notifier?
+---
 
-This project is developed and maintained by TheInfamousToTo!
-If you find it useful, consider showing your support:
+## 6. Email Notifications
+Add email notification support alongside Discord:
+- SMTP configuration for sending emails
+- HTML email templates matching Discord embed style
+- Option to send to multiple email addresses
+- Digest mode: batch codes into periodic summary emails
 
-⭐ Star on GitHub - It helps others discover this project!
-☕ Buy Me a Coffee
-❤️ Support on Ko-fi
-💳 Donate via PayPal
+**Implementation:**
+- Add SMTP settings (server, port, username, password)
+- Create email notification templates
+- Add email configuration section in GUI
+- Support both instant and digest notification modes
 
-Every bit of support helps keep this project alive and improving!
-Thank you for using HoYoLab Code Notifier! 🎮
-```
+---
+
+## 7. Code Auto-Redemption
+Automatically redeem codes on HoYoLab accounts:
+- Link HoYoLab accounts via cookies/tokens
+- Auto-redeem new codes when discovered
+- Support multiple accounts per game
+- Redemption status tracking and notifications
+
+**Implementation:**
+- Add HoYoLab account configuration
+- Implement redemption API calls for each game
+- Add account management UI
+- Track redemption success/failure per account
+- Send redemption status notifications
