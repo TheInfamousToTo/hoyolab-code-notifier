@@ -13,8 +13,10 @@ Automatically monitors for new HoYoLab redemption codes and sends notifications 
 
 - 🎮 Supports **Genshin Impact**, **Honkai: Star Rail**, and **Zenless Zone Zero**
 - 🔔 Discord webhook notifications with rich embedded messages
+- 🎭 Game-specific mascot avatars (Paimon, PomPom, Eous) for Discord notifications
+- 🖼️ Official HoYoverse game icons in the UI
 - 🚫 Duplicate code prevention - never sends the same code twice
-- 🌐 Web GUI for easy configuration
+- 🌐 Modern HoYoLab-inspired web GUI for easy configuration
 - 📁 Config file support for manual configuration
 - 🐳 Docker ready for easy deployment
 - ⚡ Lightweight and efficient
@@ -84,7 +86,13 @@ Edit `data/config.json`:
 
 ## Discord Notification Example
 
-When a new code is found, you'll receive a Discord embed like this:
+When a new code is found, you'll receive a Discord notification with game-specific mascots:
+
+| Game | Mascot | Avatar |
+|------|--------|--------|
+| Genshin Impact | Paimon | Official game icon |
+| Honkai: Star Rail | PomPom | Official game icon |
+| Zenless Zone Zero | Eous | Official game icon |
 
 ```
 🎁 New Code Available for Genshin Impact!

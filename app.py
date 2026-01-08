@@ -166,6 +166,24 @@ def send_discord_notification(game_key, code_data):
     code = code_data.get("code", "")
     rewards = code_data.get("rewards", [])
     
+    # Game-specific mascot names and avatars
+    mascot_data = {
+        "genshin": {
+            "name": "Paimon",
+            "avatar": "https://fastcdn.hoyoverse.com/static-resource-v2/2023/11/08/9db76fb146f82c045bc276956f86e047_6878380451593228482.png"
+        },
+        "starrail": {
+            "name": "PomPom",
+            "avatar": "https://fastcdn.hoyoverse.com/static-resource-v2/2025/09/24/de09aa694c26b87448cf03af683e3109_6737621355140099473.jpg"
+        },
+        "zenless": {
+            "name": "Eous",
+            "avatar": "https://hyl-static-res-prod.hoyolab.com/communityweb/business/nap.png"
+        }
+    }
+    
+    mascot = mascot_data.get(game_key, {"name": "HoYoLab", "avatar": ""})
+    
     # Build reward string
     reward_str = ""
     if rewards:
@@ -191,6 +209,8 @@ def send_discord_notification(game_key, code_data):
     }
     
     payload = {
+        "username": mascot["name"],
+        "avatar_url": mascot["avatar"],
         "embeds": [embed]
     }
     
@@ -321,6 +341,8 @@ def update_config():
 @app.route('/api/status', methods=['GET'])
 def get_status():
     """Get current status"""
+    # Reload sent codes from file to reflect any manual changes
+    load_sent_codes()
     return jsonify({
         "sent_codes": sent_codes,
         "checker_running": checker_thread is not None and checker_thread.is_alive(),
@@ -344,6 +366,8 @@ def test_webhook():
         return jsonify({"success": False, "message": "No webhook URL configured"})
     
     payload = {
+        "username": "Paimon",
+        "avatar_url": "https://fastcdn.hoyoverse.com/static-resource-v2/2023/11/08/9db76fb146f82c045bc276956f86e047_6878380451593228482.png",
         "embeds": [{
             "title": "🔔 Test Notification",
             "description": "HoYoLab Code Notifier is configured correctly!",
