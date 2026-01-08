@@ -1,0 +1,72 @@
+name: Create Release
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'version'
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      
+      - name: Check if version file changed
+        id: check
+        run: |
+          if git diff HEAD~1 HEAD --name-only | grep -q "^version$"; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Version file has changed"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "Version file has not changed"
+          fi
+      
+      - name: Read version
+        id: version
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          VERSION=$(cat version | tr -d '\n')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag_version=v$VERSION" >> $GITHUB_OUTPUT
+          echo "Creating release for version: $VERSION"
+      
+      - name: Generate changelog
+        id: changelog
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          # Try to extract changelog from CHANGELOG.md
+          if [ -f "CHANGELOG.md" ]; then
+            # Extract section for current version
+            CHANGELOG=$(awk "/^## \[?${{ steps.version.outputs.version }}\]?/,/^## \[?[0-9]/" CHANGELOG.md | head -n -1)
+            if [ -z "$CHANGELOG" ]; then
+              CHANGELOG="Release version ${{ steps.version.outputs.version }}"
+            fi
+          else
+            CHANGELOG="Release version ${{ steps.version.outputs.version }}"
+          fi
+          
+          # Write to file for the release
+          echo "$CHANGELOG" > release_notes.md
+          echo "Generated release notes"
+      
+      - name: Create Release
+        if: steps.check.outputs.changed == 'true'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.tag_version }}
+          name: Release ${{ steps.version.outputs.version }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

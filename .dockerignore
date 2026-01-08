@@ -1,0 +1,31 @@
+# Git
+.git
+.gitignore
+.github
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+
+# Documentation
+*.md
+!requirements.txt
+
+# Data (will be mounted as volume)
+data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Example files
+*.example.json

@@ -1,0 +1,9 @@
+{
+  "webhook_url": "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN",
+  "check_interval": 300,
+  "games": {
+    "genshin": true,
+    "starrail": true,
+    "zenless": true
+  }
+}
