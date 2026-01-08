@@ -701,6 +701,124 @@ def test_specific_webhook(index):
         return jsonify({"success": False, "message": str(e)})
 
 
+def get_support_payload():
+    """Get the support notification payload"""
+    return {
+        "username": "HoYoLab Code Notifier",
+        "avatar_url": "https://fastcdn.hoyoverse.com/static-resource-v2/2023/11/08/9db76fb146f82c045bc276956f86e047_6878380451593228482.png",
+        "embeds": [{
+            "title": "💝 Support HoYoLab Code Notifier",
+            "description": (
+                "Hey Travelers! 👋\n\n"
+                "Enjoying automatic code notifications? This project is **free & open source**, "
+                "crafted with love by **TheInfamousToTo**!\n\n"
+                "If it's saved you from missing codes, consider giving back:"
+            ),
+            "color": 0x7C83FF,  # Purple/accent color matching the app
+            "fields": [
+                {
+                    "name": "⭐ Star the Project",
+                    "value": "[GitHub Repository](https://github.com/TheInfamousToTo/hoyolab-code-notifier)",
+                    "inline": True
+                },
+                {
+                    "name": "💖 Sponsor",
+                    "value": "[GitHub Sponsors](https://github.com/sponsors/TheInfamousToTo)",
+                    "inline": True
+                },
+                {
+                    "name": "☕ Buy Me a Coffee",
+                    "value": "[buymeacoffee.com](https://www.buymeacoffee.com/theinfamoustoto)",
+                    "inline": True
+                },
+                {
+                    "name": "❤️ Ko-fi",
+                    "value": "[ko-fi.com](https://ko-fi.com/theinfamoustoto)",
+                    "inline": True
+                },
+                {
+                    "name": "💳 PayPal",
+                    "value": "[paypal.me](https://paypal.me/alsatrawi)",
+                    "inline": True
+                },
+                {
+                    "name": "🎮 In-Game Support",
+                    "value": "Genshin UID: `707631903`\n*(Genesis Crystals welcome!)*",
+                    "inline": True
+                }
+            ],
+            "thumbnail": {
+                "url": "https://fastcdn.hoyoverse.com/static-resource-v2/2023/11/08/9db76fb146f82c045bc276956f86e047_6878380451593228482.png"
+            },
+            "footer": {
+                "text": "Every bit helps keep this project alive! Thank you! 🙏",
+                "icon_url": "https://github.githubassets.com/favicons/favicon.png"
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }]
+    }
+
+
+@app.route('/api/webhooks/<int:index>/support', methods=['POST'])
+def send_support_to_webhook(index):
+    """Send support notification to a specific webhook"""
+    webhooks = config.get("webhooks", [])
+    
+    if index < 0 or index >= len(webhooks):
+        return jsonify({"success": False, "message": "Invalid webhook index"}), 400
+    
+    webhook = webhooks[index]
+    webhook_url = webhook.get("url", "")
+    webhook_name = webhook.get("name", "Webhook")
+    
+    if not webhook_url:
+        return jsonify({"success": False, "message": "Webhook URL is empty"})
+    
+    payload = get_support_payload()
+    
+    try:
+        response = requests.post(webhook_url, json=payload, timeout=10)
+        if response.status_code in [200, 204]:
+            return jsonify({"success": True, "message": f"Support notification sent to {webhook_name}"})
+        else:
+            return jsonify({"success": False, "message": f"Webhook returned {response.status_code}"})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
+
+@app.route('/api/send-support-notification', methods=['POST'])
+def send_support_notification():
+    """Send a support/donation reminder notification to all webhooks"""
+    webhooks = config.get("webhooks", [])
+    webhook_urls = [w.get("url") for w in webhooks if w.get("url")]
+    
+    if not webhook_urls:
+        return jsonify({"success": False, "message": "No webhooks configured"})
+    
+    payload = get_support_payload()
+    
+    success_count = 0
+    errors = []
+    
+    for url in webhook_urls:
+        try:
+            response = requests.post(url, json=payload, timeout=10)
+            if response.status_code in [200, 204]:
+                success_count += 1
+            else:
+                errors.append(f"Webhook returned {response.status_code}")
+        except Exception as e:
+            errors.append(str(e))
+    
+    if success_count > 0:
+        msg = f"Support notification sent to {success_count} webhook(s)"
+        if errors:
+            msg += f" ({len(errors)} failed)"
+        return jsonify({"success": True, "message": msg})
+    else:
+        return jsonify({"success": False, "message": f"All webhooks failed: {', '.join(errors[:3])}"})
+
+
 @app.route('/api/clear-codes', methods=['POST'])
 def clear_codes():
     """Clear sent codes history"""
@@ -720,16 +838,13 @@ def clear_codes():
     return jsonify({"success": True, "message": "Codes cleared"})
 
 
+# Initialize on module load (for gunicorn)
+print("Starting HoYoLab Code Notifier...")
+load_config()
+load_sent_codes()
+start_checker()
+
 if __name__ == '__main__':
-    print("Starting HoYoLab Code Notifier...")
-    
-    # Load configuration and sent codes
-    load_config()
-    load_sent_codes()
-    
-    # Start background checker
-    start_checker()
-    
-    # Run Flask app
+    # Run Flask development server (only when running directly)
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
