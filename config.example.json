@@ -1,9 +1,15 @@
 {
-  "webhook_url": "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN",
+  "webhooks": [
+    {
+      "name": "Main Server",
+      "url": "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN",
+      "games": {
+        "genshin": true,
+        "starrail": true,
+        "zenless": true
+      }
+    }
+  ],
   "check_interval": 300,
-  "games": {
-    "genshin": true,
-    "starrail": true,
-    "zenless": true
-  }
+  "timezone": "UTC"
 }

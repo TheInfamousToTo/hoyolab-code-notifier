@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-01-08
+
+### Added
+
+- **Multi-Webhook Support**: Configure multiple Discord webhooks with per-webhook game selection
+  - Add unlimited webhooks with custom names
+  - Enable/disable specific games for each webhook independently
+  - Test individual webhooks directly from the UI
+  - Edit and delete webhooks easily
+- **Code Expiration Tracking**: Display expiration dates in Discord notifications
+  - Timezone-aware expiration display (configurable timezone)
+  - Visual urgency indicators: critical (red) for <48 hours, warning (yellow) for <7 days
+  - Expiration info shown directly in Discord embeds
+- **Timezone Configuration**: Set your preferred timezone for expiration display
+  - Support for 30+ timezones including Middle East/Gulf region
+  - Organized timezone dropdown with regional groups
+
+### Changed
+
+- Configuration structure updated to support webhook arrays
+- Removed global webhook URL in favor of multi-webhook system
+- Settings card simplified (check interval + timezone only)
+- Games are now managed per-webhook instead of globally
+
+### Migration
+
+- Existing configurations are automatically migrated to the new format
+- Old `webhook_url` and `games` settings are converted to a single webhook entry
+
 ## [1.2.0] - 2026-01-08
 
 ### Added

@@ -12,11 +12,13 @@ Automatically monitors for new HoYoLab redemption codes and sends notifications 
 ## Features
 
 - 🎮 Supports **Genshin Impact**, **Honkai: Star Rail**, and **Zenless Zone Zero**
-- 🔔 Discord webhook notifications with rich embedded messages
+- 🔔 **Multi-Webhook Support** - Send to multiple Discord channels with per-webhook game selection
+- ⏰ **Code Expiration Tracking** - See when codes expire with timezone-aware display
 - 🎭 Game-specific mascot avatars (Paimon, PomPom, Eous) for Discord notifications
 - 🖼️ Official HoYoverse game icons in the UI
 - 🚫 Duplicate code prevention - never sends the same code twice
 - 🌐 Modern HoYoLab-inspired web GUI for easy configuration
+- 🌍 Configurable timezone for expiration display
 - 📁 Config file support for manual configuration
 - 🐳 Docker ready for easy deployment
 - ⚡ Lightweight and efficient
@@ -55,10 +57,11 @@ Automatically monitors for new HoYoLab redemption codes and sends notifications 
 ### Via Web GUI
 
 1. Open the web interface
-2. Enter your Discord webhook URL
-3. Set the check interval (minimum 60 seconds)
-4. Enable/disable games as needed
-5. Click "Save Configuration"
+2. Set the check interval (minimum 60 seconds)
+3. Configure your timezone for expiration display
+4. Click **Add Webhook** to add Discord webhooks
+5. For each webhook, toggle which games to receive notifications for
+6. Click "Save" to apply settings
 
 ### Via Config File
 
@@ -66,23 +69,39 @@ Edit `data/config.json`:
 
 ```json
 {
-  "webhook_url": "https://discord.com/api/webhooks/YOUR_WEBHOOK_URL",
+  "webhooks": [
+    {
+      "name": "Main Server",
+      "url": "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN",
+      "games": {
+        "genshin": true,
+        "starrail": true,
+        "zenless": true
+      }
+    },
+    {
+      "name": "Genshin Only Channel",
+      "url": "https://discord.com/api/webhooks/ANOTHER_WEBHOOK_ID/ANOTHER_TOKEN",
+      "games": {
+        "genshin": true,
+        "starrail": false,
+        "zenless": false
+      }
+    }
+  ],
   "check_interval": 300,
-  "games": {
-    "genshin": true,
-    "starrail": true,
-    "zenless": true
-  }
+  "timezone": "UTC"
 }
 ```
 
 | Option | Description |
 |--------|-------------|
-| `webhook_url` | Your Discord webhook URL |
+| `webhooks` | Array of webhook configurations |
+| `webhooks[].name` | Display name for the webhook |
+| `webhooks[].url` | Discord webhook URL |
+| `webhooks[].games` | Object with game toggles (genshin, starrail, zenless) |
 | `check_interval` | How often to check for new codes (in seconds, minimum 60) |
-| `games.genshin` | Enable/disable Genshin Impact notifications |
-| `games.starrail` | Enable/disable Honkai: Star Rail notifications |
-| `games.zenless` | Enable/disable Zenless Zone Zero notifications |
+| `timezone` | Timezone for expiration display (e.g., "UTC", "Asia/Tokyo", "America/New_York") |
 
 ## Discord Notification Example
 
@@ -101,6 +120,8 @@ Code: GENSHINGIFT
 
 Rewards: Primogems x60, Mora x10000
 
+⏰ Expires: Jan 15, 2026 at 11:59 PM (UTC)
+
 Redeem Link:
 https://genshin.hoyoverse.com/en/gift?code=GENSHINGIFT
 ```
@@ -114,7 +135,11 @@ https://genshin.hoyoverse.com/en/gift?code=GENSHINGIFT
 | `/api/config` | POST | Update configuration |
 | `/api/status` | GET | Get current status and sent codes |
 | `/api/check-now` | POST | Manually trigger code check |
-| `/api/test-webhook` | POST | Send a test notification |
+| `/api/webhooks` | GET | List all webhooks |
+| `/api/webhooks` | POST | Add a new webhook |
+| `/api/webhooks/<index>` | PUT | Update a webhook |
+| `/api/webhooks/<index>` | DELETE | Delete a webhook |
+| `/api/webhooks/<index>/test` | POST | Test a specific webhook |
 | `/api/clear-codes` | POST | Clear sent codes history |
 
 ## Environment Variables

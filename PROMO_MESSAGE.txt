@@ -1,0 +1,21 @@
+Hey! 👋
+
+Hope you're doing well! I've been following your content for a while and really enjoy what you do for the community.
+
+I wanted to share something I built that might be useful for you and your Discord server - it's a bot that automatically posts new redemption codes for Genshin (and Star Rail/ZZZ too) directly to your Discord the moment they go live.
+
+No more manually checking for codes or missing out on freebies! Your community gets notified instantly with the code, what rewards it gives, and a direct redeem link.
+
+Here's how it looks: the bot posts as "Paimon" with the game icon, so it fits right in with the Genshin vibe 😄
+
+If you're interested, I'd be happy to set it up for your server - all I'd need from you is a Discord webhook URL (super easy to create, takes like 30 seconds). I'll handle all the technical stuff.
+
+you can also do it by your self , super easy and more secure than trusing me !
+
+
+Here's the project if you wanna check it out:
+https://github.com/TheInfamousToTo/hoyolab-code-notifier
+
+Let me know if you have any questions or want me to set it up for you!
+
+Cheers! ✌️
