@@ -57,18 +57,20 @@ Deploy an optional "support reminder" notification to encourage users to support
 
 ---
 
-## 5. Code Statistics Dashboard
+## ~~5. Code Statistics Dashboard~~ ✅ COMPLETED
 Add a statistics section to track code redemption history:
-- Total codes discovered per game
-- Codes discovered this week/month
-- Graph showing code frequency over time
-- Export statistics as CSV/JSON
+- ✅ Total codes discovered per game
+- ✅ Codes discovered this week/month
+- ✅ Graph showing code frequency over time
+- ✅ Export statistics as CSV/JSON
 
-**Implementation:**
-- Store code discovery timestamps in sent_codes.json
-- Add statistics endpoint `/api/statistics`
-- Create dashboard section in the web GUI
-- Add chart.js or similar for visualizations
+**Implemented Features:**
+- Statistics card in web GUI with real-time stats
+- Chart.js integration for code frequency visualization
+- Export buttons for CSV and JSON data
+- Integration with statistics backend service
+- Auto-refresh every 5 minutes
+- Fallback to local data when backend unavailable
 
 ---
 

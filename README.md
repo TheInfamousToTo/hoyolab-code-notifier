@@ -14,12 +14,14 @@ Automatically monitors for new HoYoLab redemption codes and sends notifications 
 - 🎮 Supports **Genshin Impact**, **Honkai: Star Rail**, and **Zenless Zone Zero**
 - 🔔 **Multi-Webhook Support** - Send to multiple Discord channels with per-webhook game selection
 - ⏰ **Code Expiration Tracking** - See when codes expire with timezone-aware display
+- � **Code Statistics Dashboard** - Track total codes, weekly/monthly stats, and frequency charts
 - 💛 **Support Notifications** - Send support reminders globally or per-webhook
 - 🎭 Game-specific mascot avatars (Paimon, PomPom, Eous) for Discord notifications
 - 🖼️ Official HoYoverse game icons in the UI
 - 🚫 Duplicate code prevention - never sends the same code twice
 - 🌐 Modern HoYoLab-inspired web GUI for easy configuration
 - 🌍 Configurable timezone for expiration display
+- 📦 Export statistics as CSV/JSON
 - 📁 Config file support for manual configuration
 - 🐳 Docker ready for easy deployment
 - ⚡ Lightweight and efficient
@@ -141,7 +143,18 @@ https://genshin.hoyoverse.com/en/gift?code=GENSHINGIFT
 | `/api/webhooks/<index>` | PUT | Update a webhook |
 | `/api/webhooks/<index>` | DELETE | Delete a webhook |
 | `/api/webhooks/<index>/test` | POST | Test a specific webhook |
+| `/api/webhooks/<index>/support` | POST | Send support reminder to webhook |
+| `/api/send-support-notification` | POST | Send support reminder to all webhooks |
 | `/api/clear-codes` | POST | Clear sent codes history |
+
+### Statistics (via integrated backend)
+
+The statistics dashboard connects to an integrated backend service for tracking code discovery metrics:
+
+- **Total codes discovered** per game
+- **Weekly/Monthly** code counts
+- **Frequency charts** showing code discovery over time
+- **Export** statistics as CSV or JSON
 
 ## Environment Variables
 

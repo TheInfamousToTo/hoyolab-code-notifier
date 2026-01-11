@@ -363,6 +363,24 @@ def send_discord_notification(game_key, code_data):
         if len(webhook_urls) > 1:
             time.sleep(0.5)
     
+    # Send to statistics backend after successful Discord notification
+    if success_count > 0:
+        try:
+            stats_payload = {
+                "game": game_key,
+                "code": code,
+                "rewards": reward_str.replace("\n**Rewards:** ", "") if reward_str else "",
+                "expiration_date": expiration_date.isoformat() if expiration_date else None
+            }
+            requests.post(
+                "https://hoyolab-backend.satrawi.cc/api/webhook/code-discovered",
+                json=stats_payload,
+                timeout=5
+            )
+            print(f"Code {code} sent to statistics backend")
+        except Exception as e:
+            print(f"Failed to send to statistics backend: {e}")
+    
     return success_count > 0
 
 

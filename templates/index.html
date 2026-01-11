@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --bg-primary: #0b0d13;
@@ -626,6 +627,74 @@
             opacity: 0.5;
         }
 
+        /* Statistics Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .stat-card:hover {
+            border-color: rgba(124, 131, 255, 0.3);
+            background: var(--bg-card-hover);
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+            line-height: 1.2;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .stat-card.genshin .stat-value { color: var(--genshin-color); }
+        .stat-card.starrail .stat-value { color: var(--starrail-color); }
+        .stat-card.zenless .stat-value { color: var(--zenless-color); }
+
+        .card-icon.stats { background: rgba(124, 131, 255, 0.15); }
+        .card-icon.stats svg { stroke: #7C83FF; }
+
+        /* Chart container */
+        .chart-container {
+            position: relative;
+            height: 220px;
+            margin: 20px 0;
+        }
+
+        #codeFrequencyChart {
+            max-height: 220px;
+        }
+
+        .stats-loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
+        .stats-error {
+            text-align: center;
+            padding: 20px;
+            color: var(--accent-red);
+            background: rgba(239, 68, 68, 0.1);
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
         /* Full Width Card */
         .card-full {
             grid-column: 1 / -1;
@@ -1102,6 +1171,42 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Statistics Card (Full Width) -->
+            <div class="card card-full">
+                <div class="card-header">
+                    <div class="card-icon stats">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 20V10"/>
+                            <path d="M12 20V4"/>
+                            <path d="M6 20v-6"/>
+                        </svg>
+                    </div>
+                    <h3 class="card-title">Code Statistics</h3>
+                </div>
+                <div class="card-body">
+                    <div class="stats-grid" id="statsGrid">
+                        <div class="stats-loading">Loading statistics...</div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="codeFrequencyChart"></canvas>
+                    </div>
+                    <div class="btn-group" style="margin-top: 20px;">
+                        <button class="btn btn-secondary" onclick="exportCSV()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Export CSV
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportJSON()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                            Export JSON
+                        </button>
+                        <button class="btn btn-secondary" onclick="loadStatistics()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                            Refresh Stats
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Footer -->
@@ -1221,6 +1326,10 @@
         let config = {};
         let status = {};
         let editingWebhookIndex = null;
+        let frequencyChart = null;
+
+        // Statistics API URL - uses the backend service
+        const STATS_API_URL = 'https://hoyolab-backend.satrawi.cc';
 
         // Official game icon URLs from HoYoLab
         const GAME_ICONS = {
@@ -1238,8 +1347,174 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadConfig();
             loadStatus();
+            loadStatistics();
+            loadFrequencyChart();
             setInterval(loadStatus, 30000);
+            setInterval(loadStatistics, 300000); // Refresh stats every 5 minutes
         });
+
+        // Statistics Functions
+        async function loadStatistics() {
+            const grid = document.getElementById('statsGrid');
+            
+            try {
+                const response = await fetch(`${STATS_API_URL}/api/dashboard-summary`);
+                if (!response.ok) throw new Error('Failed to fetch statistics');
+                const data = await response.json();
+                renderStatistics(data);
+            } catch (error) {
+                console.error('Failed to load statistics:', error);
+                grid.innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-value">${Object.values(status.sent_codes || {}).flat().length || 0}</div>
+                        <div class="stat-label">Local Codes</div>
+                    </div>
+                    <div class="stat-card genshin">
+                        <div class="stat-value">${(status.sent_codes?.genshin || []).length}</div>
+                        <div class="stat-label">Genshin Impact</div>
+                    </div>
+                    <div class="stat-card starrail">
+                        <div class="stat-value">${(status.sent_codes?.starrail || []).length}</div>
+                        <div class="stat-label">Star Rail</div>
+                    </div>
+                    <div class="stat-card zenless">
+                        <div class="stat-value">${(status.sent_codes?.zenless || []).length}</div>
+                        <div class="stat-label">Zenless Zone Zero</div>
+                    </div>
+                `;
+            }
+        }
+
+        function renderStatistics(data) {
+            const grid = document.getElementById('statsGrid');
+            
+            const gameColors = {
+                genshin: 'genshin',
+                starrail: 'starrail', 
+                zenless: 'zenless'
+            };
+            
+            let gamesHtml = '';
+            if (data.by_game) {
+                for (const [game, info] of Object.entries(data.by_game)) {
+                    const colorClass = gameColors[game] || '';
+                    gamesHtml += `
+                        <div class="stat-card ${colorClass}">
+                            <div class="stat-value">${info.count || 0}</div>
+                            <div class="stat-label">${info.name || GAME_NAMES[game] || game}</div>
+                        </div>
+                    `;
+                }
+            }
+            
+            grid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${data.total_codes || 0}</div>
+                    <div class="stat-label">Total Codes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${data.codes_this_week || 0}</div>
+                    <div class="stat-label">This Week</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${data.codes_this_month || 0}</div>
+                    <div class="stat-label">This Month</div>
+                </div>
+                ${gamesHtml}
+            `;
+        }
+
+        async function loadFrequencyChart() {
+            try {
+                const response = await fetch(`${STATS_API_URL}/api/statistics/frequency?days=30`);
+                if (!response.ok) throw new Error('Failed to fetch frequency data');
+                const data = await response.json();
+                renderFrequencyChart(data);
+            } catch (error) {
+                console.error('Failed to load frequency data:', error);
+                // Show empty state or local data
+                const ctx = document.getElementById('codeFrequencyChart');
+                if (ctx) {
+                    ctx.parentElement.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-muted);">📊 Chart data unavailable - connect to statistics backend</div>';
+                }
+            }
+        }
+
+        function renderFrequencyChart(data) {
+            const ctx = document.getElementById('codeFrequencyChart');
+            if (!ctx) return;
+            
+            // Destroy existing chart if it exists
+            if (frequencyChart) {
+                frequencyChart.destroy();
+            }
+            
+            // Prepare data for Chart.js
+            const labels = (data.daily || []).map(d => {
+                const date = new Date(d.date);
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            });
+            const values = (data.daily || []).map(d => d.count);
+            
+            frequencyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Codes Discovered',
+                        data: values,
+                        borderColor: '#7C83FF',
+                        backgroundColor: 'rgba(124, 131, 255, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: '#7C83FF',
+                        pointBorderColor: '#7C83FF',
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(24, 27, 36, 0.95)',
+                            titleColor: '#fff',
+                            bodyColor: '#8b8f9a',
+                            borderColor: '#2a2f3c',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { 
+                                stepSize: 1,
+                                color: '#5c6070'
+                            },
+                            grid: {
+                                color: 'rgba(42, 47, 60, 0.5)'
+                            }
+                        },
+                        x: {
+                            ticks: { color: '#5c6070' },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function exportCSV() {
+            window.open(`${STATS_API_URL}/api/export/csv`, '_blank');
+        }
+
+        function exportJSON() {
+            window.open(`${STATS_API_URL}/api/export/json`, '_blank');
+        }
 
         async function loadConfig() {
             try {
