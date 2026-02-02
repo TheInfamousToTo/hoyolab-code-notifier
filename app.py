@@ -373,7 +373,7 @@ def send_discord_notification(game_key, code_data):
                 "expiration_date": expiration_date.isoformat() if expiration_date else None
             }
             requests.post(
-                "https://hoyolab-backend.satrawi.cc/api/webhook/code-discovered",
+                "https://hoyolab-backend.satrawi.com/api/webhook/code-discovered",
                 json=stats_payload,
                 timeout=5
             )
