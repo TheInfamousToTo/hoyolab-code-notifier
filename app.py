@@ -8,14 +8,21 @@ import json
 import os
 import time
 import threading
+import hashlib
+import re
+import io
+import csv
+import tempfile
 import requests
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, Response
+from security import configure_security, normalize_webhooks, post_discord_webhook
 from datetime import datetime, timedelta
 from dateutil import parser as date_parser
 from dateutil.tz import tzutc
 import pytz
 
 app = Flask(__name__)
+configure_security(app)
 
 # Paths
 CONFIG_PATH = os.environ.get('CONFIG_PATH', '/app/data/config.json')
@@ -50,7 +57,11 @@ DEFAULT_CONFIG = {
 # Global state
 config = {}
 sent_codes = {}
-code_expiration_data = {}  # Store expiration dates for codes
+code_expiration_data = {}
+code_seen_at = {}
+delivered_by_webhook = {}
+last_check_at = None
+check_lock = threading.Lock()
 checker_thread = None
 stop_checker = threading.Event()
 
@@ -60,6 +71,26 @@ def ensure_data_dir():
     data_dir = os.path.dirname(CONFIG_PATH)
     if data_dir and not os.path.exists(data_dir):
         os.makedirs(data_dir, exist_ok=True)
+
+
+def atomic_json_write(path, data):
+    """Persist JSON safely without exposing secrets to other local users."""
+    directory = os.path.dirname(path) or "."
+    os.makedirs(directory, exist_ok=True)
+    temp_name = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=directory, delete=False) as tmp:
+            temp_name = tmp.name
+            os.chmod(temp_name, 0o600)
+            json.dump(data, tmp, indent=2)
+        os.replace(temp_name, path)
+    finally:
+        if temp_name and os.path.exists(temp_name):
+            os.unlink(temp_name)
+
+
+def json_error(message, status=400):
+    return jsonify({"success": False, "message": message}), status
 
 
 def load_config():
@@ -98,9 +129,9 @@ def load_config():
                     
         except Exception as e:
             print(f"Error loading config: {e}")
-            config = DEFAULT_CONFIG.copy()
+            config = json.loads(json.dumps(DEFAULT_CONFIG))
     else:
-        config = DEFAULT_CONFIG.copy()
+        config = json.loads(json.dumps(DEFAULT_CONFIG))
         save_config()
     
     return config
@@ -109,13 +140,14 @@ def load_config():
 def save_config():
     """Save configuration to file"""
     ensure_data_dir()
-    with open(CONFIG_PATH, 'w') as f:
-        json.dump(config, f, indent=2)
+    atomic_json_write(CONFIG_PATH, config)
 
 
 def load_sent_codes():
     """Load sent codes from file"""
-    global sent_codes, code_expiration_data
+    global sent_codes, code_expiration_data, code_seen_at, delivered_by_webhook
+    code_seen_at = {}
+    delivered_by_webhook = {}
     ensure_data_dir()
     
     if os.path.exists(CODES_PATH):
@@ -128,6 +160,8 @@ def load_sent_codes():
                     if "codes" in data and "expiration" in data:
                         sent_codes = data["codes"]
                         code_expiration_data = data["expiration"]
+                        code_seen_at = data.get("seen_at", {})
+                        delivered_by_webhook = data.get("delivered", {})
                     else:
                         # Old format - just game: [codes] structure
                         sent_codes = data
@@ -152,10 +186,11 @@ def save_sent_codes():
     ensure_data_dir()
     data = {
         "codes": sent_codes,
-        "expiration": code_expiration_data
+        "expiration": code_expiration_data,
+        "seen_at": code_seen_at,
+        "delivered": delivered_by_webhook,
     }
-    with open(CODES_PATH, 'w') as f:
-        json.dump(data, f, indent=2)
+    atomic_json_write(CODES_PATH, data)
 
 
 def fetch_codes(game_key):
@@ -169,7 +204,7 @@ def fetch_codes(game_key):
     try:
         response = requests.get(api_url, headers={
             "User-Agent": "HoyoLabCodeNotifier/1.0"
-        }, timeout=10)
+        }, timeout=10, allow_redirects=False)
         
         if response.status_code != 200:
             print(f"API returned {response.status_code} for {game_key}")
@@ -202,7 +237,7 @@ def parse_expiration_date(code_data):
                 elif isinstance(exp_value, (int, float)):
                     # Unix timestamp
                     return datetime.fromtimestamp(exp_value, tz=tzutc())
-            except:
+            except (ValueError, OverflowError, TypeError):
                 continue
     return None
 
@@ -346,42 +381,28 @@ def send_discord_notification(game_key, code_data):
         "embeds": [embed]
     }
     
-    # Send to all webhooks
-    success_count = 0
+    # A failed destination is retried without duplicating successful sends.
+    delivery_key = f"{game_key}:{code}"
+    delivered = set(delivered_by_webhook.get(delivery_key, []))
+    expected = {hashlib.sha256(url.encode()).hexdigest() for url in webhook_urls}
     for webhook_url in webhook_urls:
+        destination = hashlib.sha256(webhook_url.encode()).hexdigest()
+        if destination in delivered:
+            continue
         try:
-            response = requests.post(webhook_url, json=payload, timeout=10)
-            if response.status_code in [200, 204]:
-                print(f"Notification sent to webhook for {game_name}: {code}")
-                success_count += 1
+            response = post_discord_webhook(webhook_url, payload)
+            if response.status_code in (200, 204):
+                delivered.add(destination)
+                delivered_by_webhook[delivery_key] = sorted(delivered)
+                save_sent_codes()
+                print(f"Delivered {game_name} code {code}")
             else:
-                print(f"Failed to send webhook: {response.status_code}")
-        except Exception as e:
-            print(f"Error sending webhook: {e}")
-        
-        # Rate limit between webhooks
+                print(f"Discord returned HTTP {response.status_code} for {game_name}")
+        except (ValueError, requests.RequestException):
+            print(f"Could not deliver notification for {game_name}")
         if len(webhook_urls) > 1:
             time.sleep(0.5)
-    
-    # Send to statistics backend after successful Discord notification
-    if success_count > 0:
-        try:
-            stats_payload = {
-                "game": game_key,
-                "code": code,
-                "rewards": reward_str.replace("\n**Rewards:** ", "") if reward_str else "",
-                "expiration_date": expiration_date.isoformat() if expiration_date else None
-            }
-            requests.post(
-                "https://hoyolab-backend.satrawi.com/api/webhook/code-discovered",
-                json=stats_payload,
-                timeout=5
-            )
-            print(f"Code {code} sent to statistics backend")
-        except Exception as e:
-            print(f"Failed to send to statistics backend: {e}")
-    
-    return success_count > 0
+    return expected.issubset(delivered)
 
 
 def get_webhooks_for_game(game_key):
@@ -411,9 +432,18 @@ def get_game_color(game_key):
 
 
 def check_and_notify():
-    """Check for new codes and send notifications"""
-    global sent_codes
-    
+    """Only one scan may run at a time, including manual triggers."""
+    if not check_lock.acquire(blocking=False):
+        return False
+    try:
+        _perform_check()
+    finally:
+        check_lock.release()
+    return True
+
+
+def _perform_check():
+    global sent_codes, last_check_at
     print(f"[{datetime.now()}] Checking for new codes...")
     
     for game_key in GAMES_DATA:
@@ -426,19 +456,26 @@ def check_and_notify():
         game_sent = sent_codes.get(game_key, [])
         
         for code_data in codes:
-            code = code_data.get("code", "").upper()
-            
-            if code and code not in game_sent:
+            if not isinstance(code_data, dict):
+                continue
+            raw_code = code_data.get("code", "")
+            code = raw_code.strip().upper() if isinstance(raw_code, str) else ""
+            if not re.fullmatch(r"[A-Z0-9_-]{3,128}", code):
+                continue
+            if code not in game_sent:
                 print(f"New code found for {game_key}: {code}")
                 
-                if send_discord_notification(game_key, code_data):
+                if send_discord_notification(game_key, {**code_data, "code": code}):
                     if game_key not in sent_codes:
                         sent_codes[game_key] = []
                     sent_codes[game_key].append(code)
+                    code_seen_at.setdefault(game_key, {})[code] = datetime.now(tzutc()).isoformat()
                     save_sent_codes()
                 
                 # Rate limit: wait between notifications
                 time.sleep(2)
+
+    last_check_at = datetime.now(tzutc()).isoformat()
 
 
 def checker_loop():
@@ -464,6 +501,11 @@ def start_checker():
 
 
 # Flask Routes
+@app.route('/health')
+def health():
+    return jsonify({"status": "ok"})
+
+
 @app.route('/')
 def index():
     """Main page"""
@@ -493,22 +535,30 @@ def update_config():
     """Update configuration"""
     global config
     
-    data = request.json
-    
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return json_error("Expected a JSON object")
+    patch = {}
     if "check_interval" in data:
-        config["check_interval"] = max(60, int(data["check_interval"]))
-    
+        try:
+            interval = int(data["check_interval"])
+        except (ValueError, TypeError):
+            return json_error("Check interval must be an integer")
+        if isinstance(data["check_interval"], bool) or not 60 <= interval <= 86400:
+            return json_error("Check interval must be between 60 and 86400 seconds")
+        patch["check_interval"] = interval
     if "timezone" in data:
-        # Validate timezone
         try:
             pytz.timezone(data["timezone"])
-            config["timezone"] = data["timezone"]
-        except:
-            pass  # Keep existing timezone if invalid
-    
+        except (ValueError, TypeError, pytz.UnknownTimeZoneError):
+            return json_error("Unknown timezone")
+        patch["timezone"] = data["timezone"]
     if "webhooks" in data:
-        config["webhooks"] = data["webhooks"]
-    
+        try:
+            patch["webhooks"] = normalize_webhooks(data["webhooks"])
+        except ValueError as error:
+            return json_error(str(error))
+    config.update(patch)
     save_config()
     return jsonify({"success": True, "message": "Configuration saved"})
 
@@ -516,8 +566,7 @@ def update_config():
 @app.route('/api/status', methods=['GET'])
 def get_status():
     """Get current status"""
-    # Reload sent codes from file to reflect any manual changes
-    load_sent_codes()
+    # Avoid reloading disk during an in-flight notification send.
     
     # Build codes with expiration info for the UI
     codes_with_expiration = {}
@@ -555,13 +604,15 @@ def get_status():
         "sent_codes": sent_codes,
         "codes_with_expiration": codes_with_expiration,
         "checker_running": checker_thread is not None and checker_thread.is_alive(),
-        "last_check": datetime.now().isoformat()
+        "last_check": last_check_at
     })
 
 
 @app.route('/api/check-now', methods=['POST'])
 def check_now():
     """Manually trigger a code check"""
+    if check_lock.locked():
+        return json_error("A code check is already running", 409)
     threading.Thread(target=check_and_notify, daemon=True).start()
     return jsonify({"success": True, "message": "Check triggered"})
 
@@ -569,7 +620,9 @@ def check_now():
 @app.route('/api/test-webhook', methods=['POST'])
 def test_webhook():
     """Test all webhooks or a specific one"""
-    data = request.json or {}
+    data = request.get_json(silent=True) or {}
+    if not isinstance(data, dict):
+        return json_error("Expected a JSON object")
     webhook_url = data.get("webhook_url")
     
     if webhook_url:
@@ -599,13 +652,13 @@ def test_webhook():
     
     for url in webhook_urls:
         try:
-            response = requests.post(url, json=payload, timeout=10)
+            response = post_discord_webhook(url, payload)
             if response.status_code in [200, 204]:
                 success_count += 1
             else:
                 errors.append(f"Webhook returned {response.status_code}")
         except Exception as e:
-            errors.append(str(e))
+            errors.append("Invalid Discord URL or delivery failed")
     
     if success_count > 0:
         msg = f"Test notification sent to {success_count} webhook(s)"
@@ -624,50 +677,33 @@ def get_webhooks():
 
 @app.route('/api/webhooks', methods=['POST'])
 def add_webhook():
-    """Add a new webhook"""
-    data = request.json
-    webhook_url = data.get("url", "").strip()
-    webhook_name = data.get("name", "Webhook").strip()
-    games = data.get("games", {"genshin": True, "starrail": True, "zenless": True})
-    
-    if not webhook_url:
-        return jsonify({"success": False, "message": "Webhook URL is required"}), 400
-    
-    if "webhooks" not in config:
-        config["webhooks"] = []
-    
-    # Check for duplicates
-    for existing in config["webhooks"]:
-        if existing.get("url") == webhook_url:
-            return jsonify({"success": False, "message": "Webhook already exists"}), 400
-    
-    config["webhooks"].append({
-        "name": webhook_name,
-        "url": webhook_url,
-        "games": games
-    })
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return json_error("Expected a JSON object")
+    try:
+        candidate = normalize_webhooks(config.get("webhooks", []) + [data])
+    except ValueError as error:
+        return json_error(str(error))
+    config["webhooks"] = candidate
     save_config()
-    
     return jsonify({"success": True, "message": "Webhook added"})
 
 
 @app.route('/api/webhooks/<int:index>', methods=['PUT'])
 def update_webhook(index):
-    """Update a webhook"""
     webhooks = config.get("webhooks", [])
-    
-    if index < 0 or index >= len(webhooks):
-        return jsonify({"success": False, "message": "Invalid webhook index"}), 400
-    
-    data = request.json
-    
-    if "name" in data:
-        config["webhooks"][index]["name"] = data["name"].strip()
-    if "url" in data:
-        config["webhooks"][index]["url"] = data["url"].strip()
-    if "games" in data:
-        config["webhooks"][index]["games"] = data["games"]
-    
+    if index >= len(webhooks):
+        return json_error("Invalid webhook index")
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return json_error("Expected a JSON object")
+    try:
+        candidate = list(webhooks)
+        candidate[index] = {**candidate[index], **data}
+        candidate = normalize_webhooks(candidate)
+    except ValueError as error:
+        return json_error(str(error))
+    config["webhooks"] = candidate
     save_config()
     return jsonify({"success": True, "message": "Webhook updated"})
 
@@ -710,13 +746,13 @@ def test_specific_webhook(index):
     }
     
     try:
-        response = requests.post(webhook_url, json=payload, timeout=10)
+        response = post_discord_webhook(webhook_url, payload)
         if response.status_code in [200, 204]:
             return jsonify({"success": True, "message": "Test notification sent"})
         else:
             return jsonify({"success": False, "message": f"Webhook returned {response.status_code}"})
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)})
+        return jsonify({"success": False, "message": "Invalid Discord URL or delivery failed"})
 
 
 def get_support_payload():
@@ -795,13 +831,13 @@ def send_support_to_webhook(index):
     payload = get_support_payload()
     
     try:
-        response = requests.post(webhook_url, json=payload, timeout=10)
+        response = post_discord_webhook(webhook_url, payload)
         if response.status_code in [200, 204]:
             return jsonify({"success": True, "message": f"Support notification sent to {webhook_name}"})
         else:
             return jsonify({"success": False, "message": f"Webhook returned {response.status_code}"})
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)})
+        return jsonify({"success": False, "message": "Invalid Discord URL or delivery failed"})
 
 
 @app.route('/api/send-support-notification', methods=['POST'])
@@ -820,13 +856,13 @@ def send_support_notification():
     
     for url in webhook_urls:
         try:
-            response = requests.post(url, json=payload, timeout=10)
+            response = post_discord_webhook(url, payload)
             if response.status_code in [200, 204]:
                 success_count += 1
             else:
                 errors.append(f"Webhook returned {response.status_code}")
         except Exception as e:
-            errors.append(str(e))
+            errors.append("Invalid Discord URL or delivery failed")
     
     if success_count > 0:
         msg = f"Support notification sent to {success_count} webhook(s)"
@@ -842,16 +878,24 @@ def clear_codes():
     """Clear sent codes history"""
     global sent_codes, code_expiration_data
     
-    data = request.json
+    global code_seen_at, delivered_by_webhook
+    data = request.get_json(silent=True) or {}
+    if not isinstance(data, dict):
+        return json_error("Expected a JSON object")
     game = data.get("game")
+    if game and game not in GAMES_DATA:
+        return json_error("Unknown game")
     
     if game and game in sent_codes:
         sent_codes[game] = []
         code_expiration_data[game] = {}
+        code_seen_at.pop(game, None)
+        delivered_by_webhook = {key: values for key, values in delivered_by_webhook.items() if not key.startswith(game + ":")}
     else:
         sent_codes = {"genshin": [], "starrail": [], "zenless": []}
         code_expiration_data = {"genshin": {}, "starrail": {}, "zenless": {}}
-    
+        code_seen_at = {}
+        delivered_by_webhook = {}
     save_sent_codes()
     return jsonify({"success": True, "message": "Codes cleared"})
 
