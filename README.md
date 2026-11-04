@@ -19,7 +19,10 @@ Automatically monitors for new HoYoLab redemption codes and sends notifications 
 - 🎭 Game-specific mascot avatars (Paimon, PomPom, Eous) for Discord notifications
 - 🖼️ Official HoYoverse game icons in the UI
 - 🚫 Duplicate code prevention - never sends the same code twice
-- 🌐 Modern HoYoLab-inspired web GUI for easy configuration
+- 🌐 Modern, responsive command-center dashboard with tactile controls
+- 🔒 Admin authentication, CSRF protection, and Discord-only webhook validation
+- 🔎 Search and filter code history by game; one-click code copying and redemption
+- 🛡️ Per-webhook retry tracking and atomic persisted state
 - 🌍 Configurable timezone for expiration display
 - 📦 Export statistics as CSV/JSON
 - 📁 Config file support for manual configuration
@@ -37,9 +40,15 @@ Automatically monitors for new HoYoLab redemption codes and sends notifications 
    docker-compose up -d
    ```
 
-3. Access the web interface at `http://localhost:5050`
+3. Get your generated dashboard password:
+   ```bash
+   docker exec hoyolab-code-notifier cat /app/data/admin_token
+   ```
+   Username is **admin**. Set `ADMIN_TOKEN` to your own strong value (16+ characters) instead if preferred.
 
-4. Configure your Discord webhook URL and enable/disable games
+4. Access `http://localhost:5050` and sign in as **admin** with that password
+
+5. Configure your Discord webhook URL and enable/disable games
 
 ### Manual Installation
 
@@ -53,7 +62,8 @@ Automatically monitors for new HoYoLab redemption codes and sends notifications 
    python app.py
    ```
 
-3. Access the web interface at `http://localhost:5000`
+3. Set a strong password: `export ADMIN_TOKEN='your-secret-password-at-least-16-characters'`
+4. Open `http://localhost:5000` and sign in with username **admin**
 
 ## Configuration
 
@@ -146,13 +156,18 @@ https://genshin.hoyoverse.com/en/gift?code=GENSHINGIFT
 | `/api/webhooks/<index>/support` | POST | Send support reminder to webhook |
 | `/api/send-support-notification` | POST | Send support reminder to all webhooks |
 | `/api/clear-codes` | POST | Clear sent codes history |
+| `/health` | GET | Minimal unauthenticated health check |
+| `/api/dashboard-summary` | GET | Local summary statistics |
+| `/api/statistics/frequency?days=30` | GET | Daily local code discovery counts |
+| `/api/export/csv` | GET | Export code history as CSV |
+| `/api/export/json` | GET | Export code history as JSON |
 
 ### Statistics (via integrated backend)
 
-The statistics dashboard connects to an integrated backend service for tracking code discovery metrics:
+The statistics dashboard is now served **locally** from the notifier's persisted code history, with no external statistics service required:
 
 - **Total codes discovered** per game
-- **Weekly/Monthly** code counts
+- **Weekly/Monthly** discovery counts for codes first seen by this release or later (older history has no discovery timestamps)
 - **Frequency charts** showing code discovery over time
 - **Export** statistics as CSV or JSON
 
@@ -163,14 +178,43 @@ The statistics dashboard connects to an integrated backend service for tracking 
 | `CONFIG_PATH` | `/app/data/config.json` | Path to config file |
 | `CODES_PATH` | `/app/data/sent_codes.json` | Path to sent codes file |
 | `PORT` | `5000` | Web server port |
+| `ADMIN_TOKEN` | Automatically generated | Password for HTTP Basic authentication; set 16+ characters for predictable deployment |
+| `ADMIN_TOKEN_PATH` | `<config directory>/admin_token` | Persisted password file when `ADMIN_TOKEN` is unset |
 
 ## Data Persistence
 
 All data is stored in the `data/` directory:
 - `config.json` - Configuration settings
-- `sent_codes.json` - History of sent codes (prevents duplicates)
+- `sent_codes.json` - History of sent codes, per-destination deliveries, expiration dates and discovery timestamps
+- `admin_token` - Generated dashboard password (keep private, do not commit)
 
 When using Docker, mount this directory as a volume to persist data.
+
+## Deployment and security
+
+The dashboard and JSON API require admin authentication. All state-changing API
+requests from the dashboard include a CSRF token. Only official HTTPS Discord
+webhook URLs are permitted, and redirects are not followed.
+
+**After upgrading:** restart the container, retrieve the new `admin_token` from
+the persisted `data/` volume (or configure `ADMIN_TOKEN`), then sign in.
+Keep your dashboard behind a trusted LAN, Tailscale, or authenticated reverse proxy;
+HTTP Basic passwords should not be sent over plaintext HTTP across untrusted
+networks. Terminate TLS at a reverse proxy when exposing the service remotely.
+
+Do not commit `data/` or your webhook tokens. Unlike older releases, this
+version does not automatically forward discovered code data to an external
+statistics server. To run regression tests: `python -m unittest discover -s tests -v`.
+
+## Suggested next features
+
+- Telegram and email destinations with a common, extensible notifier interface
+- Expiration-soon reminders with per-channel opt-in and retry-aware scheduling
+- Notification delivery logs, rate-limit/backoff handling, and retry queue
+- Optional authentication via OIDC or an existing trusted reverse proxy
+- Code import/replay and full notification audit trail
+- Optional HoYoLab account-based auto redemption (requires careful secret storage,
+  explicit user consent, and maintenance as upstream APIs change)
 
 ## Credits
 
