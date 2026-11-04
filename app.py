@@ -608,6 +608,82 @@ def get_status():
     })
 
 
+def _dated_codes():
+    """Yield UTC discovery timestamps; migrated legacy codes have unknown dates."""
+    for game, values in code_seen_at.items():
+        if game not in GAMES_DATA or not isinstance(values, dict):
+            continue
+        for code, raw_date in values.items():
+            try:
+                seen = date_parser.parse(raw_date)
+                if seen.tzinfo is None:
+                    seen = pytz.UTC.localize(seen)
+                yield game, code, seen.astimezone(pytz.UTC)
+            except (ValueError, TypeError, OverflowError):
+                continue
+
+
+@app.route('/api/dashboard-summary')
+def dashboard_summary():
+    counts = {game: len(sent_codes.get(game, [])) for game in GAMES_DATA}
+    now = datetime.now(tzutc())
+    dated = [date for _game, _code, date in _dated_codes()]
+    return jsonify({
+        "total_codes": sum(counts.values()),
+        "codes_this_week": sum(1 for date in dated if now - timedelta(days=7) <= date <= now),
+        "codes_this_month": sum(1 for date in dated if date.year == now.year and date.month == now.month),
+        "by_game": {
+            game: {"name": data["name"], "count": counts[game]}
+            for game, data in GAMES_DATA.items()
+        },
+    })
+
+
+@app.route('/api/statistics/frequency')
+def frequency_stats():
+    try:
+        days = int(request.args.get("days", "30"))
+    except ValueError:
+        return json_error("Days must be an integer")
+    if not 1 <= days <= 365:
+        return json_error("Days must be between 1 and 365")
+    today = datetime.now(tzutc()).date()
+    counts = {}
+    for _game, _code, date in _dated_codes():
+        day = date.date()
+        counts[day] = counts.get(day, 0) + 1
+    return jsonify({"daily": [
+        {"date": (today - timedelta(days=i)).isoformat(), "count": counts.get(today - timedelta(days=i), 0)}
+        for i in reversed(range(days))
+    ]})
+
+
+@app.route('/api/export/json')
+def export_json():
+    return jsonify({
+        "codes": sent_codes,
+        "expiration": code_expiration_data,
+        "seen_at": code_seen_at,
+    })
+
+
+@app.route('/api/export/csv')
+def export_csv():
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["game", "code", "seen_at", "expiration"])
+    for game in GAMES_DATA:
+        for code in sent_codes.get(game, []):
+            writer.writerow([
+                game, code, code_seen_at.get(game, {}).get(code, ""),
+                code_expiration_data.get(game, {}).get(code, ""),
+            ])
+    return Response(
+        output.getvalue(), mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=hoyolab-codes.csv"},
+    )
+
+
 @app.route('/api/check-now', methods=['POST'])
 def check_now():
     """Manually trigger a code check"""
