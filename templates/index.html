@@ -7,7 +7,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <style>
         :root {
             --bg-primary: #0b0d13;
@@ -1328,8 +1329,55 @@
         let editingWebhookIndex = null;
         let frequencyChart = null;
 
-        // Statistics API URL - uses the backend service
-        const STATS_API_URL = 'https://hoyolab-backend.satrawi.com';
+        // Local-first statistics and CSRF protection.
+        const STATS_API_URL = '';
+        let selectedGame = 'all';
+        const nativeFetch = window.fetch.bind(window);
+        window.fetch = (resource, options = {}) => {
+            const method = (options.method || 'GET').toUpperCase();
+            const url = new URL(typeof resource === 'string' ? resource : resource.url, location.href);
+            if (url.origin === location.origin && !['GET','HEAD','OPTIONS'].includes(method)) {
+                const headers = new Headers(options.headers || {});
+                headers.set('X-CSRF-Token', document.querySelector('meta[name="csrf-token"]').content);
+                return nativeFetch(resource, {...options, headers});
+            }
+            return nativeFetch(resource, options);
+        };
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, c => ({
+                '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+            })[c]);
+        }
+        function setGameFilter(game) {
+            selectedGame = game;
+            document.querySelectorAll('[data-game-filter]').forEach(button => {
+                const active = button.dataset.gameFilter === game;
+                button.classList.toggle('is-active', active);
+                button.setAttribute('aria-pressed', String(active));
+            });
+            renderSentCodes();
+        }
+        function updateDashboardHero() {
+            const counts = status.sent_codes || {};
+            const n = game => (counts[game] || []).length;
+            const pairs = {heroTotal: n('genshin')+n('starrail')+n('zenless'),
+                heroDestinations: (config.webhooks || []).length,
+                heroGenshin: n('genshin'), heroStarrail: n('starrail'), heroZenless: n('zenless')};
+            for (const [id,value] of Object.entries(pairs)) {
+                document.getElementById(id).textContent = value;
+            }
+            const date = status.last_check ? new Date(status.last_check) : null;
+            document.getElementById('heroLastCheck').textContent =
+                date && !Number.isNaN(date.getTime()) ? date.toLocaleString() : 'Awaiting first scan';
+            document.getElementById('heroLive').textContent = status.checker_running ? 'MONITORING' : 'CHECKER OFFLINE';
+            document.getElementById('heroLive').classList.toggle('is-offline', !status.checker_running);
+        }
+        document.addEventListener('click', async event => {
+            const button = event.target.closest('[data-copy-code]');
+            if (!button) return;
+            try { await navigator.clipboard.writeText(button.dataset.copyCode); showToast('Code copied','success'); }
+            catch { showToast('Clipboard unavailable','error'); }
+        });
 
         // Official game icon URLs from HoYoLab
         const GAME_ICONS = {
@@ -1400,8 +1448,8 @@
                     const colorClass = gameColors[game] || '';
                     gamesHtml += `
                         <div class="stat-card ${colorClass}">
-                            <div class="stat-value">${info.count || 0}</div>
-                            <div class="stat-label">${info.name || GAME_NAMES[game] || game}</div>
+                            <div class="stat-value">${Number(info.count) || 0}</div>
+                            <div class="stat-label">${escapeHtml(info.name || GAME_NAMES[game] || game)}</div>
                         </div>
                     `;
                 }
@@ -1435,7 +1483,7 @@
                 // Show empty state or local data
                 const ctx = document.getElementById('codeFrequencyChart');
                 if (ctx) {
-                    ctx.parentElement.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-muted);">📊 Chart data unavailable - connect to statistics backend</div>';
+                    ctx.parentElement.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-muted);">Chart unavailable — local history is retained</div>';
                 }
             }
         }
@@ -1444,6 +1492,7 @@
             const ctx = document.getElementById('codeFrequencyChart');
             if (!ctx) return;
             
+            if (typeof Chart === 'undefined') return;
             // Destroy existing chart if it exists
             if (frequencyChart) {
                 frequencyChart.destroy();
@@ -1525,6 +1574,7 @@
                 document.getElementById('timezone').value = config.timezone || 'UTC';
                 
                 renderWebhooks();
+                updateDashboardHero();
             } catch (error) {
                 showToast('Failed to load configuration', 'error');
             }
@@ -1548,6 +1598,7 @@
                 
                 renderWebhooks();
                 renderSentCodes();
+                updateDashboardHero();
             } catch (error) {
                 console.error('Failed to load status:', error);
             }
@@ -1571,7 +1622,7 @@
             grid.innerHTML = webhooks.map((webhook, index) => {
                 const name = webhook.name || `Webhook ${index + 1}`;
                 const url = webhook.url || '';
-                const truncatedUrl = url.length > 45 ? url.substring(0, 45) + '...' : url;
+                const truncatedUrl = 'Discord endpoint secured · URL hidden';
                 const games = webhook.games || {};
                 
                 const enabledGames = Object.entries(games)
@@ -1582,7 +1633,7 @@
                     <div class="webhook-card" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                             <div style="flex: 1; min-width: 0;">
-                                <h4 style="margin: 0; font-weight: 600; font-size: 1rem;">${name}</h4>
+                                <h4 style="margin: 0; font-weight: 600; font-size: 1rem;">${escapeHtml(name)}</h4>
                                 <div style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px; font-family: monospace; overflow: hidden; text-overflow: ellipsis;">${truncatedUrl}</div>
                             </div>
                             <div style="display: flex; gap: 8px; margin-left: 12px; flex-shrink: 0;">
@@ -1626,8 +1677,11 @@
             let hasAnyCodes = false;
             let html = '';
             
-            for (const [game, codes] of Object.entries(codesWithExp)) {
-                const gameName = GAME_NAMES[game] || game;
+            const search = (document.getElementById('codeSearch')?.value || '').trim().toLowerCase();
+            for (const [game, gameCodes] of Object.entries(codesWithExp)) {
+                if (!GAME_NAMES[game] || (selectedGame !== 'all' && selectedGame !== game)) continue;
+                const codes = gameCodes.filter(info => String(info.code || '').toLowerCase().includes(search));
+                const gameName = GAME_NAMES[game];
                 
                 if (codes.length > 0) {
                     hasAnyCodes = true;
@@ -1647,7 +1701,10 @@
                                     const urgency = expStatus.urgency || 'unknown';
                                     const formattedExp = codeInfo.expiration_formatted;
                                     const expText = formattedExp || expStatus.text || 'No expiration info';
-                                    return `<span class="code-tag">${code}<span class="expiration-badge ${urgency}" title="${formattedExp || ''}">${expText}</span></span>`;
+                                    const redeem = {genshin:'https://genshin.hoyoverse.com/en/gift?code=',
+                                        starrail:'https://hsr.hoyoverse.com/gift?code=',
+                                        zenless:'https://zenless.hoyoverse.com/redemption?code='};
+                                    return `<span class="code-tag code-entry"><span class="code-string">${escapeHtml(code)}</span><span class="expiration-badge ${escapeHtml(urgency)}" title="${escapeHtml(formattedExp || '')}">${escapeHtml(expText)}</span><button type="button" class="code-copy" data-copy-code="${escapeHtml(code)}">Copy</button><a class="redeem-link" href="${redeem[game]}${encodeURIComponent(code)}" target="_blank" rel="noopener noreferrer">Redeem ↗</a></span>`;
                                 }).join('')
                                 : '<span class="code-tag" style="color: var(--text-muted); border-style: dashed;">No codes yet</span>'
                             }
@@ -1673,7 +1730,7 @@
                             </div>
                             <div class="codes-list">
                                 ${codes.length > 0 
-                                    ? codes.map(code => `<span class="code-tag">${code}</span>`).join('')
+                                    ? codes.map(code => `<span class="code-tag">${escapeHtml(code)}</span>`).join('')
                                     : '<span class="code-tag" style="color: var(--text-muted); border-style: dashed;">No codes yet</span>'
                                 }
                             </div>
