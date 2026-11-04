@@ -985,4 +985,5 @@ start_checker()
 if __name__ == '__main__':
     # Run Flask development server (only when running directly)
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    # Keep direct Python execution private; Docker uses Gunicorn's separate bind.
+    app.run(host=os.environ.get('DEV_HOST', '127.0.0.1'), port=port, debug=False)
