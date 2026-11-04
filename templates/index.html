@@ -1007,6 +1007,62 @@
                 font-size: 0.85rem;
             }
         }
+
+        /* Responsive, tactile, glass-like command center — with reduced-motion support. */
+        :root{--bg-primary:#090d17;--bg-secondary:#101724;--bg-card:#121c2b;--bg-card-hover:#19283a;--border-color:#28384a;--text-primary:#f6f9ff;--text-secondary:#acb9ca;--text-muted:#8292a7;--accent-blue:#60c1e8;--accent-purple:#879aff;--accent:#8cb3ff;--gradient-hoyo:linear-gradient(110deg,#55d6d1 0%,#88a0ff 55%,#dfb7ff 100%)}
+        html{scroll-behavior:smooth}
+        body{background:#090d17;color:var(--text-primary);letter-spacing:-.015em}
+        body::before{background:radial-gradient(ellipse 56% 45% at 12% 0%,rgba(75,127,180,.14),transparent),radial-gradient(ellipse 43% 47% at 95% 35%,rgba(117,99,186,.11),transparent)}
+        body::after{content:"";position:fixed;inset:0;pointer-events:none;opacity:.16;background-image:linear-gradient(rgba(153,183,209,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(153,183,209,.06) 1px,transparent 1px);background-size:50px 50px}
+        .app-container{max-width:1420px;padding:25px 38px 72px}
+        .navbar{background:rgba(15,22,34,.86);border:1px solid rgba(164,196,233,.12);border-radius:18px;padding:16px 23px;box-shadow:0 18px 48px rgba(0,0,0,.14);backdrop-filter:blur(20px);margin-bottom:28px}
+        .navbar-logo{background:linear-gradient(140deg,#17465c,#34436a);border:1px solid #42667e;border-radius:14px;width:44px;height:44px}
+        .navbar-title{background:none;-webkit-text-fill-color:initial;color:#eff7ff;letter-spacing:-.05em;font-size:1.15rem}
+        .navbar-subtitle{letter-spacing:.11em;text-transform:uppercase;color:#91a7bd;font-size:.62rem}
+        .support-btn{border:1px solid rgba(155,185,215,.12);background:#172338;border-radius:12px}
+        .dashboard-hero{position:relative;overflow:hidden;border-radius:26px;padding:34px 38px 20px;background:radial-gradient(circle at 75% 6%,rgba(124,155,255,.18),transparent 36%),linear-gradient(125deg,#15253a,#0d1728 72%);border:1px solid rgba(156,196,231,.23);box-shadow:0 25px 70px rgba(0,0,0,.21)}
+        .dashboard-hero::before{content:"";position:absolute;width:460px;height:460px;right:-130px;top:-190px;border:1px solid rgba(175,211,241,.15);border-radius:50%;box-shadow:0 0 0 55px rgba(146,189,237,.022),0 0 0 110px rgba(146,189,237,.018);pointer-events:none}
+        .hero-topline,.hero-columns,.game-summary{position:relative;z-index:1}
+        .hero-topline{display:flex;justify-content:space-between;align-items:center;gap:16px}
+        .hero-eyebrow,.section-kicker{font-size:.66rem;font-weight:800;letter-spacing:.19em;color:#8fdada}
+        .hero-live{font-size:.65rem;letter-spacing:.13em;font-weight:800;background:rgba(70,198,153,.12);border:1px solid rgba(70,198,153,.26);color:#80f0c6;border-radius:30px;padding:8px 13px;white-space:nowrap}
+        .hero-live::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#6fe3a9;box-shadow:0 0 0 3px rgba(111,227,169,.12);margin-right:9px}
+        .hero-live.is-offline{background:rgba(255,145,104,.12);border-color:rgba(255,145,104,.26);color:#ffaf8c}.hero-live.is-offline::before{background:#ffaf8c}
+        .hero-columns{display:grid;grid-template-columns:1.2fr .8fr;gap:38px;padding:45px 0 32px}
+        .hero-intro h1{font-size:clamp(2.4rem,4.4vw,4.8rem);line-height:1.08;letter-spacing:-.07em;font-weight:800;max-width:780px}
+        .hero-intro h1 span{background:var(--gradient-hoyo);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+        .hero-intro p{color:#acbed0;max-width:520px;font-size:1rem;line-height:1.78;margin-top:20px}
+        .hero-actions{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin-top:28px}
+        .btn.hero-primary{padding:15px 24px;font-size:.87rem;border-radius:13px;font-weight:750;background:#a1dbdf;color:#12202a;border:1px solid #b9fbf5;box-shadow:0 4px 0 #367e89,0 15px 25px rgba(21,110,128,.19);transition:transform .16s,box-shadow .16s}
+        .btn.hero-primary:hover{transform:translateY(2px);box-shadow:0 2px 0 #367e89,0 9px 18px rgba(21,110,128,.18)}
+        .hero-secondary{color:#d2e8f4;text-decoration:none;font-weight:650;font-size:.87rem;border-bottom:1px solid #668da9;padding-bottom:5px}
+        .hero-last-check{font-size:.67rem;font-weight:800;letter-spacing:.12em;color:#829cb2;margin-top:28px}.hero-last-check span{letter-spacing:0;font-weight:500;margin-left:9px;color:#b6ccdc;font-size:.77rem}
+        .hero-metrics{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-self:center}
+        .hero-metric{background:rgba(194,221,249,.055);border:1px solid rgba(189,215,239,.15);border-radius:20px;padding:25px 20px;min-height:170px;display:flex;flex-direction:column;justify-content:center}
+        .metric-label{color:#a6bdd2;font-size:.8rem;font-weight:650}.metric-value{font-size:clamp(2.4rem,4vw,4.2rem);letter-spacing:-.09em;font-weight:800;line-height:1.3;color:#e8f6ff}.metric-main .metric-value{color:#94dfd6}.metric-footer{font-size:.71rem;color:#8098af}
+        .game-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;border-top:1px solid rgba(171,205,237,.15);padding-top:18px}
+        .game-filter{border:1px solid rgba(170,207,244,.12);border-radius:13px;background:rgba(187,220,253,.045);color:#b4c4d6;min-width:0;display:flex;gap:9px;align-items:center;text-align:left;padding:15px 13px;font:inherit;font-size:.75rem;cursor:pointer;transition:background .18s,border-color .18s,transform .18s}
+        .game-filter:hover{background:rgba(179,216,255,.09);transform:translateY(-2px)}.game-filter.is-active{background:rgba(116,208,213,.14);border-color:rgba(134,226,226,.45);color:#efffff}
+        .game-filter strong{margin-left:auto;font-weight:800;color:#efffff}.game-marker{width:9px;height:9px;flex:0 0 9px;border-radius:50%}.game-marker.all{background:#91dadc}.game-marker.genshin{background:#4fd1c5}.game-marker.starrail{background:#ae96ff}.game-marker.zenless{background:#f4c95c}
+        .section-intro{display:flex;justify-content:space-between;align-items:end;gap:12px;margin:38px 0 14px}.section-intro h2{font-size:1.4rem;letter-spacing:-.04em;margin-top:7px}.section-note{color:#8194ac;font-size:.78rem}
+        .status-bar{background:rgba(33,48,66,.65);border:1px solid rgba(146,185,214,.17);border-radius:12px;padding:10px 16px;margin-bottom:17px;color:#b3cadb;font-size:.76rem}
+        .main-grid{gap:18px;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr)}
+        .card{background:linear-gradient(150deg,rgba(24,35,52,.95),rgba(15,23,37,.98));border:1px solid rgba(155,187,219,.14);border-radius:20px;box-shadow:0 18px 38px rgba(0,0,0,.09);overflow:hidden}
+        .card-header{border-bottom:1px solid rgba(154,186,214,.12)}.card-title{font-weight:750;letter-spacing:-.035em}.card-body{padding:22px}.card-icon{border-radius:12px}
+        .form-input{background:#0e1929;border:1px solid #32445a;border-radius:11px;color:#e6f1fb;min-height:46px}.form-input:focus{border-color:#83b5cf;box-shadow:0 0 0 3px rgba(125,210,220,.12)}
+        .btn{border-radius:10px;transition:transform .18s,box-shadow .18s,background .18s}.btn:hover{transform:translateY(-1px)}
+        .btn-primary{background:linear-gradient(125deg,#79bccf,#8da8f0);color:#081422;border:1px solid #c0d9f9;font-weight:800}
+        .webhook-card{box-shadow:0 5px 15px rgba(0,0,0,.11)}.game-toggle-btn{border-radius:100px!important}
+        .history-search-wrap{margin-left:auto;max-width:230px;flex:1}.history-search{font:inherit;font-size:.82rem;width:100%;background:#101c2c;border:1px solid #33465e;color:#e7f2ff;padding:10px 13px;border-radius:10px;outline:none}.history-search:focus{border-color:#8ed5d7}
+        .code-entry{display:inline-flex!important;align-items:center;flex-wrap:wrap;gap:8px!important;padding:11px 13px!important;border-radius:12px!important;background:#112135!important}
+        .code-string{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;color:#ecf8ff;font-weight:750}
+        .code-copy,.redeem-link{cursor:pointer;border:1px solid #3a526a;background:#1b3446;color:#b9e6ef;text-decoration:none;border-radius:7px;padding:5px 8px;font:inherit;font-size:.7rem}
+        .code-copy:hover,.redeem-link:hover{background:#274759;color:#fff}
+        .stat-card{background:#101d2f;border:1px solid #2b4054;border-radius:14px}.modal{backdrop-filter:blur(8px)}
+        button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #91e5df;outline-offset:3px}
+        @media(max-width:1024px){.app-container{padding:20px}.hero-columns{grid-template-columns:1fr}.hero-metrics{max-width:700px}.game-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+        @media(max-width:650px){.app-container{padding:12px 12px 50px}.navbar{padding:13px}.support-icons{gap:3px}.support-btn{width:32px;height:32px}.dashboard-hero{padding:24px 19px 15px;border-radius:18px}.hero-columns{padding:28px 0 25px;gap:22px}.hero-intro h1{font-size:clamp(2.25rem,9vw,3.1rem)}.hero-intro p{font-size:.88rem}.hero-metrics{gap:8px}.hero-metric{padding:17px 13px;min-height:130px;border-radius:13px}.metric-value{font-size:2.6rem}.game-summary{grid-template-columns:1fr 1fr;gap:6px}.game-filter{font-size:.7rem;padding:11px 9px;gap:6px}.section-intro{align-items:flex-start}.section-note{display:none}.main-grid{grid-template-columns:1fr}.history-search-wrap{max-width:150px}.card-body{padding:16px}}
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
     </style>
 </head>
 <body>
@@ -1037,6 +1093,33 @@
                 </div>
             </div>
         </nav>
+
+
+        <section class="dashboard-hero" aria-labelledby="heroTitle">
+            <div class="hero-topline"><span class="hero-eyebrow">HOYOVERSE / COMMAND CENTER</span><span class="hero-live" id="heroLive">STARTING...</span></div>
+            <div class="hero-columns">
+                <div class="hero-intro">
+                    <h1 id="heroTitle">Never miss<br><span>a redemption code.</span></h1>
+                    <p>All your HoYoverse rewards in one place. Discover new codes, send Discord alerts, and redeem rewards before they expire.</p>
+                    <div class="hero-actions">
+                        <button class="btn btn-primary hero-primary" type="button" onclick="checkNow()">↻ &nbsp; Check for new codes</button>
+                        <a class="hero-secondary" href="#webhooksArea">Manage notifications ↗</a>
+                    </div>
+                    <div class="hero-last-check">LAST SCAN <span id="heroLastCheck">Awaiting first scan</span></div>
+                </div>
+                <div class="hero-metrics">
+                    <div class="hero-metric metric-main"><span class="metric-label">Codes discovered</span><span class="metric-value" id="heroTotal">0</span><span class="metric-footer">Across three games</span></div>
+                    <div class="hero-metric"><span class="metric-label">Discord channels</span><span class="metric-value" id="heroDestinations">0</span><span class="metric-footer">Delivery destinations</span></div>
+                </div>
+            </div>
+            <div class="game-summary" aria-label="Filter codes by game">
+                <button class="game-filter is-active" type="button" data-game-filter="all" aria-pressed="true" onclick="setGameFilter('all')"><span class="game-marker all"></span><span>All games</span><strong>View all</strong></button>
+                <button class="game-filter" type="button" data-game-filter="genshin" aria-pressed="false" onclick="setGameFilter('genshin')"><span class="game-marker genshin"></span><span>Genshin Impact</span><strong id="heroGenshin">0</strong></button>
+                <button class="game-filter" type="button" data-game-filter="starrail" aria-pressed="false" onclick="setGameFilter('starrail')"><span class="game-marker starrail"></span><span>Honkai: Star Rail</span><strong id="heroStarrail">0</strong></button>
+                <button class="game-filter" type="button" data-game-filter="zenless" aria-pressed="false" onclick="setGameFilter('zenless')"><span class="game-marker zenless"></span><span>Zenless Zone Zero</span><strong id="heroZenless">0</strong></button>
+            </div>
+        </section>
+        <div class="section-intro"><div><span class="section-kicker">CONTROL CENTER</span><h2>Notifications & settings</h2></div><span class="section-note">Simple configuration. Reliable delivery.</span></div>
 
         <!-- Status Bar -->
         <div class="status-bar">
@@ -1117,7 +1200,7 @@
             </div>
 
             <!-- Webhooks Card -->
-            <div class="card">
+            <div class="card" id="webhooksArea">
                 <div class="card-header">
                     <div class="card-icon games">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1150,7 +1233,8 @@
                             <line x1="8" y1="18" x2="12" y2="18"/>
                         </svg>
                     </div>
-                    <h3 class="card-title">Sent Codes History</h3>
+                    <h3 class="card-title">Redemption codes</h3>
+                    <div class="history-search-wrap"><input id="codeSearch" class="history-search" type="search" placeholder="Search codes…" autocomplete="off" aria-label="Search codes" oninput="renderSentCodes()"></div>
                 </div>
                 <div class="card-body">
                     <div class="history-content" id="sentCodesContainer">
